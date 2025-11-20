@@ -13,7 +13,8 @@ import re
 # Load environment variables first
 # NOTE: Ensure you have a .env file with GOOGLE_API_KEY and/or GROQ_API_KEY
 load_dotenv()
-
+os.environ['GOOGLE_API_KEY'] = os.getenv('GOOGLE_API_KEY')
+os.environ['GROQ_API_KEY'] = os.getenv('GROQ_API_KEY')
 # --- Configuration Constants ---
 GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 GROQ_TEXT_MODEL = "llama3-70b-8192"
@@ -577,3 +578,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
