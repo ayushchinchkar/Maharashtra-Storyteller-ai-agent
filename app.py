@@ -371,7 +371,7 @@ def main():
     """, unsafe_allow_html=True)
     
     st.markdown('<div class="main-header">📖 Maharashtra Lok Katha Storyteller</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">_Chala, aikoo ek sundar goshta!_ (Come, let\'s hear a beautiful story!)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">_Chala, vachuya ek sundar gosht!_ (Come, let\'s read a beautiful story!)</div>', unsafe_allow_html=True)
     
     if 'storyteller' not in st.session_state:
         st.session_state.storyteller = MaharashtraStoryteller()
@@ -552,3 +552,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
