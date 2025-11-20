@@ -8,19 +8,14 @@ import docx
 import time
 import requests
 from typing import Optional
-import re # Import the regex library for parsing recommendations
+import re
+
+# Load environment variables first
+load_dotenv()
 
 # --- Configuration Constants ---
-# Removed TTS-specific constants
-
-# --- Apply user-provided configuration keys directly to environment for immediate use ---
-os.environ['GOOGLE_API_KEY'] = os.getenv('GOOGLE_API_KEY')
-os.environ['GROQ_API_KEY'] = os.getenv('GROQ_API_KEY')
 GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 GROQ_TEXT_MODEL = "llama3-70b-8192"
-
-# Load environment variables (will pick up the keys set above)
-load_dotenv()
 
 # --- Main Class ---
 
@@ -45,8 +40,7 @@ class MaharashtraStoryteller:
             try:
                 genai.configure(api_key=self.google_api_key)
             except Exception as e:
-                # In a Streamlit environment, st.error is usually preferred over print
-                st.error(f"Failed to configure Google API: {e}") 
+                st.error(f"Failed to configure Google API: {e}")
     
     def extract_text_from_file(self, uploaded_file):
         """Extract text from uploaded files (PDF, DOCX, TXT)"""
@@ -99,7 +93,6 @@ class MaharashtraStoryteller:
             return None
             
         try:
-            # Use the configured model name (gemini-2.5-flash)
             model = genai.GenerativeModel(self.gemini_text_model)
             
             full_prompt = f"""
@@ -148,7 +141,6 @@ class MaharashtraStoryteller:
             }
             data = {
                 "messages": [{"role": "user", "content": full_prompt}],
-                # Use the configured Groq model name (llama3-70b-8192)
                 "model": self.groq_text_model,
                 "temperature": 0.7,
                 "max_tokens": 1024,
@@ -214,8 +206,6 @@ class MaharashtraStoryteller:
         # Try Gemini first (Primary)
         if self.google_api_key:
             try:
-                # Use a more capable model for multi-step creative task if available, 
-                # but sticking to gemini-2.5-flash for consistency.
                 model = genai.GenerativeModel(self.gemini_text_model)
                 with st.spinner("Searching for related books and videos..."):
                     response = model.generate_content(recommendation_prompt)
@@ -319,7 +309,7 @@ def main():
     .main-header {
         font-family: 'Teko', sans-serif;
         font-size: 3.5rem;
-        color: #FF9933; /* Saffron */
+        color: #FF9933;
         text-align: center;
         font-weight: 700;
         margin-bottom: 0.5rem;
@@ -327,13 +317,13 @@ def main():
     }
     .sub-header {
         font-size: 1.25rem;
-        color: #138808; /* Green */
+        color: #138808;
         text-align: center;
         margin-bottom: 2rem;
         font-weight: 600;
     }
     .story-container {
-        background-color: #FFFDF5; /* Off-white background */
+        background-color: #FFFDF5;
         padding: 2rem;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -394,11 +384,9 @@ def main():
         
         # API Status
         st.subheader("API Status")
-        # Display the model names being used
         google_status = f"✅ Configured ({storyteller.gemini_text_model})" if storyteller.google_api_key else "❌ Not Configured"
         groq_status = f"✅ Configured ({storyteller.groq_text_model})" if storyteller.groq_api_key else "❌ Not Configured"
         
-        # Updated description for Google API status
         st.markdown(f'<div class="api-status {"status-ok" if storyteller.google_api_key else "status-error"}">Google Gemini (Text/Recommendations): {google_status}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="api-status {"status-ok" if storyteller.groq_api_key else "status-error"}">Groq (Text Fallback): {groq_status}</div>', unsafe_allow_html=True)
         
@@ -478,7 +466,7 @@ def main():
             
             if final_prompt:
                 st.session_state.current_story = storyteller.generate_story(final_prompt)
-                st.session_state.current_recommendations = None # Clear recommendations when generating new text
+                st.session_state.current_recommendations = None
             else:
                 st.warning("Please enter a story prompt or choose a quick story theme.")
                 st.session_state.current_story = None
@@ -495,7 +483,6 @@ def main():
             # Action buttons: Recommendations and Download
             btn_col1, btn_col2 = st.columns([1, 2])
             
-            # Button to generate recommendations
             with btn_col1:
                 if st.button("💡 Find Related Content", use_container_width=True, key="recommend_button"):
                     if storyteller.google_api_key or storyteller.groq_api_key:
@@ -503,7 +490,6 @@ def main():
                     else:
                         st.error("Cannot generate recommendations without a configured API key.")
 
-            # Download Button
             with btn_col2:
                 st.download_button(
                     "💾 Download Story as Text",
@@ -522,27 +508,20 @@ def main():
                 st.markdown(recommendations_text)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
-                # --- Logic to extract and link the most similar YouTube match ---
-                
-                # 1. Find the start of the YouTube section (look for 'YouTube' or 'Search Keywords')
+                # Extract and link the most similar YouTube match
                 yt_section_match = re.search(r'(YouTube video topics|Suggested Search Keywords)', recommendations_text, re.IGNORECASE)
                 
                 first_yt_query = None
                 if yt_section_match:
-                    # Get the text block after the heading
                     yt_block = recommendations_text[yt_section_match.end():]
-                    # Look for the first list item (starting with a list marker)
                     first_item_match = re.search(r'[\*\-]\s*(.*)|[1]\.\s*(.*)', yt_block)
                     
                     if first_item_match:
-                        # Group 1 is for * or - list, Group 2 is for 1. list
                         query_raw = first_item_match.group(1) or first_item_match.group(2)
                         if query_raw:
-                            # Clean up the query (remove trailing markdown/trim)
                             first_yt_query = query_raw.strip().strip('*').strip('-').strip()
                 
                 if first_yt_query:
-                    # Create the YouTube search URL
                     search_url = f"https://www.youtube.com/results?search_query={first_yt_query.replace(' ', '+')}"
                     
                     st.markdown("---")
@@ -554,7 +533,6 @@ def main():
                         type="secondary",
                         use_container_width=True
                     )
-                # --- End new logic ---
 
     with col2:
         st.header("🎯 Tips & Elements")
