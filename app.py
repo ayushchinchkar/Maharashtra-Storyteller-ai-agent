@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+from dotenv import load_dotenv
 import tempfile
 import PyPDF2
 import docx
@@ -9,24 +10,41 @@ import requests
 from typing import Optional
 import re
 
+# Load environment variables first
+load_dotenv()
+
 # --- Configuration Constants ---
 GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 GROQ_TEXT_MODEL = "llama3-70b-8192"
 
+# --- Apply user-provided configuration keys directly to environment for immediate use ---
+# Only set environment variables if they exist and are not None
+google_key = os.getenv('GOOGLE_API_KEY')
+groq_key = os.getenv('GROQ_API_KEY')
+
+if google_key:
+    os.environ['GOOGLE_API_KEY'] = google_key
+if groq_key:
+    os.environ['GROQ_API_KEY'] = groq_key
+
 # --- Main Class ---
 
 class MaharashtraStoryteller:
+    """
+    Core class to handle API configurations, document processing, and
+    LLM generation with fallback mechanisms, now focusing on storytelling and recommendations.
+    """
     def __init__(self):
         self.setup_api_keys()
         self.uploaded_files_content = ""
+        # Set the model names from the global constants
         self.gemini_text_model = GEMINI_TEXT_MODEL
         self.groq_text_model = GROQ_TEXT_MODEL
         
     def setup_api_keys(self):
-        """Setup API keys from Streamlit secrets or environment variables"""
-        # Try Streamlit secrets first, then environment variables
-        self.google_api_key = st.secrets.get("GOOGLE_API_KEY", os.getenv('GOOGLE_API_KEY'))
-        self.groq_api_key = st.secrets.get("GROQ_API_KEY", os.getenv('GROQ_API_KEY'))
+        """Setup API keys from environment variables"""
+        self.google_api_key = os.getenv('GOOGLE_API_KEY')
+        self.groq_api_key = os.getenv('GROQ_API_KEY')
         
         if self.google_api_key:
             try:
@@ -544,4 +562,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
