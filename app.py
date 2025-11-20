@@ -11,12 +11,8 @@ from typing import Optional
 import re
 
 # Load environment variables first
-# NOTE: Ensure you have a .env file with GOOGLE_API_KEY and/or GROQ_API_KEY
 load_dotenv()
-GEMINI_API_KEY="AIzaSyBHXQCH8FN2QCsvNZeEd-NFSCKiHehSc0c"
 
-# Groq API Configuration (Fallback)
-GROQ_API_KEY="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"
 # --- Configuration Constants ---
 GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 GROQ_TEXT_MODEL = "llama3-70b-8192"
@@ -37,16 +33,13 @@ class MaharashtraStoryteller:
         
     def setup_api_keys(self):
         """Setup API keys from environment variables"""
-        # API keys are read from the environment
         self.google_api_key = os.getenv('GOOGLE_API_KEY')
         self.groq_api_key = os.getenv('GROQ_API_KEY')
         
         if self.google_api_key:
             try:
-                # Configure the Gemini client if the key is available
                 genai.configure(api_key=self.google_api_key)
             except Exception as e:
-                # Streamlit error messages are handled gracefully in the UI
                 st.error(f"Failed to configure Google API: {e}")
     
     def extract_text_from_file(self, uploaded_file):
@@ -54,7 +47,6 @@ class MaharashtraStoryteller:
         text_content = ""
         
         try:
-            # Use tempfile to handle file objects from Streamlit
             with tempfile.NamedTemporaryFile(delete=False, suffix=uploaded_file.name) as tmp_file:
                 tmp_file.write(uploaded_file.getvalue())
                 tmp_file_path = tmp_file.name
@@ -74,7 +66,6 @@ class MaharashtraStoryteller:
                 with open(tmp_file_path, 'r', encoding='utf-8') as file:
                     text_content = file.read()
             
-            # Clean up the temporary file
             os.unlink(tmp_file_path)
             
         except Exception as e:
@@ -102,7 +93,7 @@ class MaharashtraStoryteller:
             return None
             
         try:
-            client = genai.Client()
+            model = genai.GenerativeModel(self.gemini_text_model)
             
             full_prompt = f"""
             You are a Maharashtra Lok Katha (folk story) storyteller. Tell stories in the traditional Maharashtrian storytelling style.
@@ -117,10 +108,7 @@ class MaharashtraStoryteller:
             Make the story engaging and authentic.
             """
             
-            response = client.models.generate_content(
-                model=self.gemini_text_model,
-                contents=full_prompt
-            )
+            response = model.generate_content(full_prompt)
             return response.text
             
         except Exception as e:
@@ -218,12 +206,9 @@ class MaharashtraStoryteller:
         # Try Gemini first (Primary)
         if self.google_api_key:
             try:
-                client = genai.Client()
+                model = genai.GenerativeModel(self.gemini_text_model)
                 with st.spinner("Searching for related books and videos..."):
-                    response = client.models.generate_content(
-                        model=self.gemini_text_model,
-                        contents=recommendation_prompt
-                    )
+                    response = model.generate_content(recommendation_prompt)
                 st.success("✅ Recommendations generated with Google Gemini.")
                 return response.text
             except Exception as e:
@@ -313,7 +298,7 @@ def main():
         layout="wide"
     )
     
-    # Custom CSS for Maharashtrian theme (Saffron, Green, White inspiration)
+    # Custom CSS for Maharashtrian theme
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;700&family=Inter:wght@400;600&display=swap');
@@ -324,7 +309,7 @@ def main():
     .main-header {
         font-family: 'Teko', sans-serif;
         font-size: 3.5rem;
-        color: #FF9933; /* Saffron */
+        color: #FF9933;
         text-align: center;
         font-weight: 700;
         margin-bottom: 0.5rem;
@@ -332,13 +317,13 @@ def main():
     }
     .sub-header {
         font-size: 1.25rem;
-        color: #138808; /* Green */
+        color: #138808;
         text-align: center;
         margin-bottom: 2rem;
         font-weight: 600;
     }
     .story-container {
-        background-color: #FFFDF5; /* Off-white / Cream background */
+        background-color: #FFFDF5;
         padding: 2rem;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -348,7 +333,7 @@ def main():
         font-size: 1.05rem;
     }
     .recommendations-container {
-        background-color: #f0f7ff; /* Light blue/info color */
+        background-color: #f0f7ff;
         padding: 1.5rem;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -388,7 +373,6 @@ def main():
     st.markdown('<div class="main-header">📖 Maharashtra Lok Katha Storyteller</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">_Chala, aikoo ek sundar goshta!_ (Come, let\'s hear a beautiful story!)</div>', unsafe_allow_html=True)
     
-    # Initialize the Storyteller class in session state
     if 'storyteller' not in st.session_state:
         st.session_state.storyteller = MaharashtraStoryteller()
     
@@ -419,7 +403,7 @@ def main():
             accept_multiple_files=True
         )
         
-        # Logic to re-process files only if the selection changes
+        # Process files
         current_file_names = {f.name for f in uploaded_files}
         if 'last_uploaded_files' not in st.session_state or st.session_state.last_uploaded_files != current_file_names:
             with st.spinner("Reading your documents..."):
@@ -436,7 +420,6 @@ def main():
                              height=200, 
                              disabled=True)
         else:
-            # Clear stored content if no files are uploaded
             if storyteller.uploaded_files_content != "":
                 storyteller.uploaded_files_content = ""
                 st.session_state.last_uploaded_files = set()
@@ -455,12 +438,6 @@ def main():
         if 'story_prompt' not in st.session_state:
             st.session_state.story_prompt = ""
             
-        # Function to update prompt from quick buttons
-        def set_prompt(new_prompt):
-            st.session_state.story_prompt = new_prompt
-            st.session_state.story_input_area = new_prompt # Update the widget value directly
-            
-        # Story input area
         story_prompt = st.text_area(
             "What story would you like to hear?",
             value=st.session_state.story_prompt,
@@ -469,33 +446,32 @@ def main():
             key="story_input_area"
         )
         
+        def set_prompt(new_prompt):
+            st.session_state.story_prompt = new_prompt
+        
         # Quick story buttons
         col1_1, col1_2, col1_3 = st.columns(3)
         with col1_1:
-            # Use a dummy key to force state update when button is clicked
-            st.button("🧡 Bravery Story", on_click=set_prompt, args=("Tell me a brave story from Maharashtra about courage and honor",), use_container_width=True, key="btn_bravery")
+            st.button("🧡 Bravery Story", on_click=set_prompt, args=("Tell me a brave story from Maharashtra about courage and honor",), use_container_width=True)
         with col1_2:
-            st.button("💚 Wisdom Tale", on_click=set_prompt, args=("Share a wise folk tale from Maharashtra with a moral lesson about kindness",), use_container_width=True, key="btn_wisdom")
+            st.button("💚 Wisdom Tale", on_click=set_prompt, args=("Share a wise folk tale from Maharashtra with a moral lesson about kindness",), use_container_width=True)
         with col1_3:
-            st.button("💙 Mythological Story", on_click=set_prompt, args=("Tell me a mythological story from Maharashtra about the gods and legends of Pandharpur",), use_container_width=True, key="btn_myth")
+            st.button("💙 Mythological Story", on_click=set_prompt, args=("Tell me a mythological story from Maharashtra about the gods and legends of Pandharpur",), use_container_width=True)
         
         
         st.markdown("---")
 
-        # Generate Button
         if st.button("📖 Generate Lok Katha", type="primary", use_container_width=True, key="generate_button"):
             final_prompt = st.session_state.story_prompt 
             
             if final_prompt:
-                # Store the generated story in session state
                 st.session_state.current_story = storyteller.generate_story(final_prompt)
-                st.session_state.current_recommendations = None # Clear old recommendations
+                st.session_state.current_recommendations = None
             else:
                 st.warning("Please enter a story prompt or choose a quick story theme.")
                 st.session_state.current_story = None
 
         
-        # Story Display Area
         if 'current_story' in st.session_state and st.session_state.current_story:
             story = st.session_state.current_story
             
@@ -532,21 +508,17 @@ def main():
                 st.markdown(recommendations_text)
                 st.markdown('</div>', unsafe_allow_html=True)
                 
-                # Logic to extract the first YouTube search keyword and create a link
+                # Extract and link the most similar YouTube match
                 yt_section_match = re.search(r'(YouTube video topics|Suggested Search Keywords)', recommendations_text, re.IGNORECASE)
                 
                 first_yt_query = None
                 if yt_section_match:
-                    # Look for the block of text after the heading
                     yt_block = recommendations_text[yt_section_match.end():]
-                    # Find the first item in the list (numbered or bulleted)
                     first_item_match = re.search(r'[\*\-]\s*(.*)|[1]\.\s*(.*)', yt_block)
                     
                     if first_item_match:
-                        # Group 1 for bullet points, Group 2 for numbered lists
                         query_raw = first_item_match.group(1) or first_item_match.group(2)
                         if query_raw:
-                            # Clean up the query string
                             first_yt_query = query_raw.strip().strip('*').strip('-').strip()
                 
                 if first_yt_query:
@@ -580,5 +552,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
